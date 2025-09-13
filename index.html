@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日本の数字に変換</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 600px;
+            width: 90%;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        p {
+            color: #555;
+            margin-bottom: 25px;
+        }
+        #numberInput {
+            width: calc(100% - 20px);
+            min-height: 80px;
+            padding: 12px 10px;
+            margin-bottom: 20px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+        #numberInput:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        #convertButton {
+            padding: 12px 30px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        #convertButton:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+        .output-section {
+            margin-top: 25px;
+            text-align: left;
+        }
+        .output-box {
+            background-color: #f8f9fa;
+            border: 1px solid #e2e6ea;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            position: relative;
+        }
+        .output-label {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .output-text {
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            font-size: 1.2rem;
+            color: #0056b3;
+            padding-right: 60px;
+        }
+        .copy-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 8px 12px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.3s ease;
+        }
+        .copy-button:hover {
+            background-color: #5a6268;
+        }
+        .error {
+            color: #dc3545;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        /* ルビ表示のスタイル調整 */
+        .output-reading ruby {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .output-reading rt {
+            font-size: 0.8rem;
+            line-height: 1;
+        }
+        .output-reading {
+            pointer-events: none;
+            user-select: none;
+        }
+        .input-error-message {
+            color: #dc3545;
+            font-weight: bold;
+            height: 1.5em;
+            text-align: center;
+            margin-top: -15px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>日本の数字に変換</h1>
+    <p>10<sup>72</sup>未満の自然数を日本の数字の読みに変換するよ</p>
+    
+    <div class="input-error-message" id="inputErrorMessage"></div>
+    <textarea id="numberInput" placeholder="ここに数値を入力" rows="4"></textarea>
+    <button id="convertButton">変換</button>
+
+    <div id="results-container">
+        <div id="error-message" class="error" style="display: none;"></div>
+        
+        <div class="output-section">
+            <div class="output-label">漢数字（読み付き）</div>
+            <div class="output-box output-reading">
+                <div id="kanjiReadingResult" class="output-text"></div>
+            </div>
+        </div>
+        
+        <div class="output-section">
+            <div class="output-label">漢数字（コピペ用）</div>
+            <div class="output-box">
+                <div id="kanjiCopyResult" class="output-text"></div>
+                <button class="copy-button" onclick="copyToClipboard('kanjiCopyResult')">コピー</button>
+            </div>
+        </div>
+
+        <div class="output-section">
+            <div class="output-label">アラビア数字混じり</div>
+            <div class="output-box">
+                <div id="arabicResult" class="output-text"></div>
+                <button class="copy-button" onclick="copyToClipboard('arabicResult')">コピー</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const units = [
+        { kanji: '', yomi: '' },
+        { kanji: '万', yomi: 'まん' },
+        { kanji: '億', yomi: 'おく' },
+        { kanji: '兆', yomi: 'ちょう' },
+        { kanji: '京', yomi: 'けい' },
+        { kanji: '垓', yomi: 'がい' },
+        { kanji: '𥝱', yomi: 'じょ' },
+        { kanji: '穣', yomi: 'じょう' },
+        { kanji: '溝', yomi: 'こう' },
+        { kanji: '澗', yomi: 'かん' },
+        { kanji: '正', yomi: 'せい' },
+        { kanji: '載', yomi: 'さい' },
+        { kanji: '極', yomi: 'ごく' },
+        { kanji: '恒河沙', yomi: 'ごうがしゃ' },
+        { kanji: '阿僧祇', yomi: 'あそうぎ' },
+        { kanji: '那由他', yomi: 'なゆた' },
+        { kanji: '不可思議', yomi: 'ふかしぎ' },
+        { kanji: '無量大数', yomi: 'むりょうたいすう' }
+    ];
+    const digits = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+    const places = ['', '十', '百', '千'];
+
+    const inputErrorMessageDiv = document.getElementById('inputErrorMessage');
+
+    function preprocessInput(inputStr) {
+        const zenkakuToHankakuMap = {
+            '０': '0', '１': '1', '２': '2', '３': '3', '４': '4',
+            '５': '5', '６': '6', '７': '7', '８': '8', '９': '9'
+        };
+        let halfwidthStr = '';
+        for (let i = 0; i < inputStr.length; i++) {
+            const char = inputStr[i];
+            halfwidthStr += zenkakuToHankakuMap[char] || char;
+        }
+        return halfwidthStr.replace(/,/g, '');
+    }
+
+    function validateInput(inputStr) {
+        const numStr = preprocessInput(inputStr);
+
+        if (numStr === '') {
+            return { isValid: true, message: '' };
+        }
+        if (!/^\d+$/.test(numStr)) {
+            return { isValid: false, message: 'エラー：半角か全角で自然数を入力してください。' };
+        }
+        if (BigInt(numStr) <= 0n) {
+            return { isValid: false, message: 'エラー：1以上の整数を入力してください。' };
+        }
+        // 10^72（9999無量大数+1）を超えるかどうかのチェック
+        if (numStr.length > 72) {
+            return { isValid: false, message: 'エラー：桁数が多すぎます（9999無量大数を超える数）。' };
+        }
+        
+        return { isValid: true, message: '' };
+    }
+
+    function convertToKanji(numStr, includeReading) {
+        let bigNum;
+        try {
+            bigNum = BigInt(numStr);
+        } catch (e) {
+            return { success: false, message: 'エラー：入力は数値を指定してください。' };
+        }
+
+        if (bigNum <= 0n) {
+            return { success: false, message: 'エラー：入力は1以上の自然数である必要があります。' };
+        }
+
+        let resultHTML = '';
+        let unitIndex = 0;
+        let tempNum = bigNum;
+
+        while (tempNum > 0n) {
+            const part = tempNum % 10000n;
+            
+            if (part !== 0n) {
+                let partString = '';
+                let tempPart = Number(part);
+                let placeIndex = 0;
+
+                while (tempPart > 0) {
+                    const digit = tempPart % 10;
+                    if (digit !== 0) {
+                        if (digit === 1 && placeIndex > 0) {
+                            partString = places[placeIndex] + partString;
+                        } else {
+                            partString = digits[digit] + places[placeIndex] + partString;
+                        }
+                    }
+                    tempPart = Math.floor(tempPart / 10);
+                    placeIndex++;
+                }
+                
+                const unit = units[unitIndex];
+                let unitString = unit.kanji;
+                if (includeReading && unit.kanji && unit.yomi) {
+                    unitString = `<ruby>${unit.kanji}<rt>${unit.yomi}</rt></ruby>`;
+                }
+
+                resultHTML = partString + unitString + resultHTML;
+            }
+            
+            tempNum = tempNum / 10000n;
+            unitIndex++;
+
+            if (unitIndex >= units.length) {
+                return { success: false, message: 'エラー：サポート範囲外の数値です（無量大数まで）。' };
+            }
+        }
+        return { success: true, message: resultHTML };
+    }
+
+    function convertToArabicMixed(numStr) {
+        let bigNum;
+        try {
+            bigNum = BigInt(numStr);
+        } catch (e) {
+            return { success: false, message: 'エラー：入力は数値を指定してください。' };
+        }
+
+        if (bigNum <= 0n) {
+            return { success: false, message: 'エラー：入力は1以上の自然数である必要があります。' };
+        }
+
+        let result = '';
+        let tempNum = bigNum;
+        let unitIndex = 0;
+
+        while (tempNum > 0n) {
+            const part = tempNum % 10000n;
+            
+            if (part !== 0n) {
+                const unit = units[unitIndex];
+                result = part.toString() + unit.kanji + result;
+            }
+            
+            tempNum = tempNum / 10000n;
+            unitIndex++;
+
+            if (unitIndex >= units.length) {
+                return { success: false, message: 'エラー：サポート範囲外の数値です（無量大数まで）。' };
+            }
+        }
+        return { success: true, message: result };
+    }
+
+    function copyToClipboard(elementId) {
+        const textToCopy = document.getElementById(elementId).innerText;
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            alert('コピーしました！');
+        }).catch(err => {
+            console.error('コピーに失敗しました', err);
+        });
+    }
+
+    const numberInput = document.getElementById('numberInput');
+    const convertButton = document.getElementById('convertButton');
+    const kanjiReadingResultDiv = document.getElementById('kanjiReadingResult');
+    const kanjiCopyResultDiv = document.getElementById('kanjiCopyResult');
+    const arabicResultDiv = document.getElementById('arabicResult');
+    const errorMessageDiv = document.getElementById('error-message');
+    const resultsContainer = document.getElementById('results-container');
+
+    numberInput.addEventListener('input', () => {
+        const validationResult = validateInput(numberInput.value);
+        if (validationResult.isValid) {
+            inputErrorMessageDiv.textContent = '';
+            convertButton.disabled = false;
+        } else {
+            inputErrorMessageDiv.textContent = validationResult.message;
+            convertButton.disabled = true;
+        }
+        if (!validationResult.isValid || numberInput.value.trim() === '') {
+            kanjiReadingResultDiv.textContent = '';
+            kanjiCopyResultDiv.textContent = '';
+            arabicResultDiv.textContent = '';
+        }
+    });
+
+    convertButton.addEventListener('click', () => {
+        const preprocessedNum = preprocessInput(numberInput.value.trim());
+
+        const validationResult = validateInput(numberInput.value);
+        if (!validationResult.isValid) {
+            showError(validationResult.message);
+            return;
+        }
+
+        hideError();
+        resultsContainer.style.display = 'block';
+
+        const kanjiReadingRes = convertToKanji(preprocessedNum, true);
+        const kanjiCopyRes = convertToKanji(preprocessedNum, false);
+        const arabicRes = convertToArabicMixed(preprocessedNum);
+        
+        if (!kanjiReadingRes.success) {
+            showError(kanjiReadingRes.message);
+            return;
+        }
+        if (!kanjiCopyRes.success) {
+            showError(kanjiCopyRes.message);
+            return;
+        }
+        if (!arabicRes.success) {
+            showError(arabicRes.message);
+            return;
+        }
+
+        kanjiReadingResultDiv.innerHTML = kanjiReadingRes.message;
+        kanjiCopyResultDiv.textContent = kanjiCopyRes.message.replace(/<[^>]*>/g, '');
+        arabicResultDiv.textContent = arabicRes.message;
+    });
+
+    function showError(message) {
+        errorMessageDiv.textContent = message;
+        errorMessageDiv.style.display = 'block';
+        resultsContainer.style.display = 'none';
+        kanjiReadingResultDiv.textContent = '';
+        kanjiCopyResultDiv.textContent = '';
+        arabicResultDiv.textContent = '';
+    }
+
+    function hideError() {
+        errorMessageDiv.style.display = 'none';
+    }
+</script>
+</body>
+</html>
