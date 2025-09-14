@@ -208,6 +208,7 @@
         return halfwidthStr.replace(/,/g, '');
     }
 
+    
     function validateInput(inputStr) {
         const numStr = preprocessInput(inputStr);
 
@@ -220,11 +221,11 @@
         if (BigInt(numStr) <= 0n) {
             return { isValid: false, message: 'エラー：1以上の整数を入力してください。' };
         }
-        // 10^72（9999無量大数+1）を超えるかどうかのチェック
+        // 桁数チェック（カンマ除去後の有効桁数で判定）
         if (numStr.length > 72) {
             return { isValid: false, message: 'エラー：桁数が多すぎます（9999無量大数を超える数）。' };
         }
-        
+
         return { isValid: true, message: '' };
     }
 
@@ -237,14 +238,14 @@
         }
 
         if (bigNum <= 0n) {
-            return { success: false, message: 'エラー：入力は1以上の自然数である必要があります。' };
+            return { success: false, message: 'エラー：1以上の自然数である必要があります。' };
         }
 
         let resultHTML = '';
         let unitIndex = 0;
         let tempNum = bigNum;
 
-        while (tempNum > 0n) {
+        while (tempNum > 0n && unitIndex < units.length) {
             const part = tempNum % 10000n;
             
             if (part !== 0n) {
@@ -276,11 +277,12 @@
             
             tempNum = tempNum / 10000n;
             unitIndex++;
-
-            if (unitIndex >= units.length) {
-                return { success: false, message: 'エラー：サポート範囲外の数値です（無量大数まで）。' };
-            }
         }
+        
+        if (tempNum > 0n) {
+             return { success: false, message: 'エラー：サポート範囲外の数値です（9999無量大数を超える数）。' };
+        }
+
         return { success: true, message: resultHTML };
     }
 
@@ -293,14 +295,14 @@
         }
 
         if (bigNum <= 0n) {
-            return { success: false, message: 'エラー：入力は1以上の自然数である必要があります。' };
+            return { success: false, message: 'エラー：1以上の自然数である必要があります。' };
         }
 
         let result = '';
         let tempNum = bigNum;
         let unitIndex = 0;
 
-        while (tempNum > 0n) {
+        while (tempNum > 0n && unitIndex < units.length) {
             const part = tempNum % 10000n;
             
             if (part !== 0n) {
@@ -310,11 +312,12 @@
             
             tempNum = tempNum / 10000n;
             unitIndex++;
-
-            if (unitIndex >= units.length) {
-                return { success: false, message: 'エラー：サポート範囲外の数値です（無量大数まで）。' };
-            }
         }
+        
+        if (tempNum > 0n) {
+             return { success: false, message: 'エラー：サポート範囲外の数値です（9999無量大数を超える数）。' };
+        }
+
         return { success: true, message: result };
     }
 
@@ -396,6 +399,7 @@
 
     function hideError() {
         errorMessageDiv.style.display = 'none';
+        resultsContainer.style.display = 'block';
     }
 </script>
 </body>
